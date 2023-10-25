@@ -1446,7 +1446,7 @@ enum _ActivePane {
 }
 
 /// Enum defining different editing modes for an object within a cell-based system.
-enum EditAs {
+enum PictureResizeMode {
   /// In this mode, when you resize the cell, the Image remains the same size,
   /// and only the cell's dimensions are adjusted.
   moveButDontSizeWithCell('oneCell'),
@@ -1459,5 +1459,5 @@ enum EditAs {
   final String value;
 
   /// Constructor to initialize the enum with a string value.
-  const EditAs(this.value);
+  const PictureResizeMode(this.value);
 }

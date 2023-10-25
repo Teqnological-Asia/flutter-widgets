@@ -10,7 +10,6 @@ import 'dart:ui';
 
 import 'package:archive/archive.dart';
 import 'package:crypto/crypto.dart';
-import 'package:flutter/material.dart';
 // ignore: depend_on_referenced_packages
 import 'package:image/image.dart' as img;
 import 'package:intl/date_symbol_data_local.dart';

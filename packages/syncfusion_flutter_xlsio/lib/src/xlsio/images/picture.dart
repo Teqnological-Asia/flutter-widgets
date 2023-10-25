@@ -28,12 +28,12 @@ class Picture {
   /// Worksheet sheet = workbook.worksheets[0];
   /// List<int> bytes = File('image.png').readAsBytesSync();
   /// Picture picture = sheet.picutes.addStream(1, 1, bytes);
-  /// picture.editAs = EditAs.moveAndSizeWithCell;
+  /// picture.resizeMode = PictureResizeMode.moveAndSizeWithCell;
   /// List<int> bytes = workbook.saveAsStream();
   /// File('Picutes.xlsx').writeAsBytes(bytes);
   /// workbook.dispose();
   /// ```
-  EditAs editAs = EditAs.moveAndSizeWithCell;
+  PictureResizeMode resizeMode = PictureResizeMode.moveAndSizeWithCell;
 
   /// Gets/Sets the image data.
   List<int>? _imageData;
