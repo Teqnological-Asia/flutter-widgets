@@ -20,8 +20,6 @@ import 'package:intl/number_symbols_data.dart';
 import 'package:jiffy/jiffy.dart';
 import 'package:syncfusion_officecore/officecore.dart';
 import 'package:xml/xml.dart';
-
-part 'src/test/images.dart';
 part 'src/xlsio/autoFilters/auto_filter.dart';
 part 'src/xlsio/autoFilters/autofilter_impl.dart';
 part 'src/xlsio/autoFilters/autofiltercollection.dart';
