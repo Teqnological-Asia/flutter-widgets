@@ -2202,7 +2202,7 @@ class SerializeWorkbook {
             builder.element(
               'xdr:twoCellAnchor',
               nest: () {
-                builder.attribute('editAs', 'twoCell');
+                builder.attribute('editAs', picture.editAs.value);
                 builder.element(
                   'xdr:from',
                   nest: () {
@@ -2453,7 +2453,7 @@ class SerializeWorkbook {
             builder.element(
               'xdr:twoCellAnchor',
               nest: () async {
-                builder.attribute('editAs', 'twoCell');
+                builder.attribute('editAs', picture.editAs.value);
                 builder.element(
                   'xdr:from',
                   nest: () async {
