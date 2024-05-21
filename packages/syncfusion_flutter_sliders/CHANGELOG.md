@@ -1,5 +1,29 @@
 ## Unreleased
 
+**General**
+
+* Provided th​e Material 3 themes support.
+
+## [24.1.46] - 17/01/2024
+
+**General**
+
+* Upgraded the `intl` package to the latest version 0.19.0.
+
+## Range Slider
+
+**Bugs**
+
+* #FB48050 - Now, the tooltip will be displayed properly when its size is greater than the widget in range slider.
+
+## Slider
+
+**Bugs**
+
+* #FB48050 - Now, the tooltip will be displayed properly when its size is greater than the widget in slider.
+
+## [21.1.37] - 03/29/2023
+
 ## Range Selector
 
 **Bugs**

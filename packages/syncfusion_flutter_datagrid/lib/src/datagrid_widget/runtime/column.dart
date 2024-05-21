@@ -13,6 +13,7 @@ import '../../grid_common/visible_line_info.dart';
 import '../helper/callbackargs.dart';
 import '../helper/datagrid_configuration.dart';
 import '../helper/datagrid_helper.dart' as grid_helper;
+import '../helper/datagrid_helper.dart';
 import '../helper/enums.dart';
 import '../sfdatagrid.dart';
 import 'generator.dart';
@@ -339,7 +340,11 @@ class ColumnSizer {
 
   void _ensureColumnVisibility(DataGridConfiguration dataGridConfiguration) {
     for (final GridColumn column in dataGridConfiguration.columns) {
-      final int index = dataGridConfiguration.columns.indexOf(column);
+      int index = dataGridConfiguration.columns.indexOf(column);
+      if (dataGridConfiguration.source.groupedColumns.isNotEmpty) {
+        index = grid_helper.resolveToScrollColumnIndex(
+            dataGridConfiguration, index);
+      }
       dataGridConfiguration.container.columnWidths
           .setHidden(index, index, !column.visible);
     }
@@ -370,7 +375,7 @@ class ColumnSizer {
     // Set width based on Column.Width
     final List<GridColumn> widthColumns = dataGridConfiguration.columns
         .skipWhile((GridColumn column) => !column.visible)
-        .where((GridColumn column) => !(column.width).isNaN)
+        .where((GridColumn column) => !column.width.isNaN)
         .toList();
     for (final GridColumn column in widthColumns) {
       totalColumnSize +=
@@ -444,6 +449,12 @@ class ColumnSizer {
             _setColumnWidth(dataGridConfiguration, column, column._autoWidth);
       }
       calculatedColumns.add(column);
+    }
+
+    if (dataGridConfiguration.source.groupedColumns.isNotEmpty) {
+      totalColumnSize +=
+          dataGridConfiguration.dataGridThemeHelper!.indentColumnWidth *
+              dataGridConfiguration.source.groupedColumns.length;
     }
     _setWidthBasedOnGrid(dataGridConfiguration, totalColumnSize,
         calculatedColumns, viewPortWidth);
@@ -624,7 +635,12 @@ class ColumnSizer {
     switch (dataGridConfiguration.columnWidthCalculationRange) {
       case ColumnWidthCalculationRange.allRows:
         startRowIndex = 0;
-        endRowIndex = dataGridConfiguration.source.rows.length - 1;
+        if (dataGridConfiguration.source.groupedColumns.isEmpty) {
+          endRowIndex = dataGridConfiguration.source.rows.length - 1;
+        } else {
+          endRowIndex =
+              dataGridConfiguration.group!.displayElements!.length - 1;
+        }
         break;
       case ColumnWidthCalculationRange.visibleRows:
         final VisibleLinesCollection visibleLines =
@@ -632,9 +648,11 @@ class ColumnSizer {
                 dataGridConfiguration.textDirection == TextDirection.rtl);
         startRowIndex =
             visibleLines.firstBodyVisibleIndex <= visibleLines.length - 1
-                ? visibleLines.firstBodyVisibleIndex
+                ? grid_helper.resolveToRecordIndex(
+                    dataGridConfiguration, visibleLines.firstBodyVisibleIndex)
                 : 0;
-        endRowIndex = visibleLines.lastBodyVisibleIndex;
+        endRowIndex = grid_helper.resolveToRecordIndex(
+            dataGridConfiguration, visibleLines.lastBodyVisibleIndex);
         break;
     }
 
@@ -654,7 +672,15 @@ class ColumnSizer {
     final DataGridConfiguration dataGridConfiguration =
         _dataGridStateDetails!();
     if (grid_helper.isFooterWidgetRow(rowIndex, dataGridConfiguration) ||
-        grid_helper.isTableSummaryIndex(dataGridConfiguration, rowIndex)) {
+        grid_helper.isTableSummaryIndex(dataGridConfiguration, rowIndex) ||
+        grid_helper.isCaptionSummaryRow(
+            dataGridConfiguration, rowIndex, false)) {
+      return 0.0;
+    }
+
+    rowIndex = _resolveRowIndex(dataGridConfiguration, rowIndex, false);
+
+    if (rowIndex == -1) {
       return 0.0;
     }
 
@@ -671,8 +697,7 @@ class ColumnSizer {
         dataGridRow = dataGridConfiguration.source.rows[rowIndex];
         break;
       case ColumnWidthCalculationRange.visibleRows:
-        dataGridRow =
-            grid_helper.getDataGridRow(dataGridConfiguration, rowIndex);
+        dataGridRow = effectiveRows(dataGridConfiguration.source)[rowIndex];
         break;
     }
     return _measureCellWidth(
@@ -822,8 +847,9 @@ class ColumnSizer {
     final int columnIndex = dataGridConfiguration.columns.indexOf(column);
     final double width = _getColumnWidth(column, columnWidth);
     column._actualWidth = width;
-    dataGridConfiguration.container.columnWidths[columnIndex] =
-        column._actualWidth;
+    final int index = grid_helper.resolveToScrollColumnIndex(
+        dataGridConfiguration, columnIndex);
+    dataGridConfiguration.container.columnWidths[index] = column._actualWidth;
     return width;
   }
 
@@ -870,6 +896,30 @@ class ColumnSizer {
     return columnWidth;
   }
 
+  int _resolveRowIndex(DataGridConfiguration dataGridConfiguration,
+      int rowIndex, bool canResolveIndex) {
+    if (dataGridConfiguration.source.groupedColumns.isNotEmpty) {
+      if (canResolveIndex) {
+        rowIndex =
+            grid_helper.resolveToRecordIndex(dataGridConfiguration, rowIndex);
+      }
+
+      final dynamic row =
+          dataGridConfiguration.group?.displayElements?.grouped[rowIndex];
+      if (row != null && row is DataGridRow) {
+        final int recordIndex =
+            effectiveRows(dataGridConfiguration.source).indexOf(row);
+        if (canResolveIndex) {
+          return grid_helper.resolveToRowIndex(
+              dataGridConfiguration, recordIndex);
+        }
+        return recordIndex;
+      }
+      return -1;
+    }
+    return rowIndex;
+  }
+
   /// Calculates the width of the header cell based on the [GridColumn.columnName].
   /// You can override this method to perform the custom calculation for height.
   ///
@@ -899,7 +949,7 @@ class ColumnSizer {
       width: double.infinity,
       value: column.columnName,
       rowIndex: grid_helper.getHeaderIndex(_dataGridStateDetails!()),
-    ).width.roundToDouble();
+    ).width.ceilToDouble();
   }
 
   /// Calculates the width of the cell based on the [DataGridCell.value]. You
@@ -940,7 +990,7 @@ class ColumnSizer {
             textStyle: textStyle,
             width: double.infinity)
         .width
-        .roundToDouble();
+        .ceilToDouble();
   }
 
   /// Calculates the height of the header cell based on the [GridColumn.columnName].
@@ -965,7 +1015,8 @@ class ColumnSizer {
         column,
         grid_helper.getHeaderIndex(_dataGridStateDetails!()),
         column.columnName,
-        textStyle);
+        textStyle,
+        isHeaderCell: true);
   }
 
   /// Calculates the height of the cell based on the [DataGridCell.value].
@@ -1007,13 +1058,18 @@ class ColumnSizer {
     double autoFitHeight = 0.0;
     if (dataGridConfiguration.stackedHeaderRows.isNotEmpty &&
         rowIndex <= dataGridConfiguration.stackedHeaderRows.length - 1) {
-      return dataGridConfiguration.headerRowHeight;
+      // We did not provide support to automatically calculate the height of a
+      // stacked header based on the content.
+      // So we have returned the default header row height .
+      return 56.0;
     }
     if (grid_helper.isFooterWidgetRow(rowIndex, dataGridConfiguration)) {
       return dataGridConfiguration.footerHeight;
     }
 
-    if (grid_helper.isTableSummaryIndex(dataGridConfiguration, rowIndex)) {
+    if (grid_helper.isTableSummaryIndex(dataGridConfiguration, rowIndex) ||
+        grid_helper.isCaptionSummaryRow(
+            dataGridConfiguration, rowIndex, true)) {
       return dataGridConfiguration.rowHeight;
     }
 
@@ -1036,6 +1092,11 @@ class ColumnSizer {
       return computeHeaderCellHeight(
           column, _getDefaultTextStyle(dataGridConfiguration, true));
     } else {
+      rowIndex = _resolveRowIndex(dataGridConfiguration, rowIndex, true);
+      if (rowIndex == -1) {
+        return 0.0;
+      }
+
       final DataGridRow row =
           grid_helper.getDataGridRow(dataGridConfiguration, rowIndex);
       return computeCellHeight(column, row, _getCellValue(row, column),
@@ -1050,10 +1111,12 @@ class ColumnSizer {
   }
 
   double _measureCellHeight(
-      GridColumn column, int rowIndex, Object? cellValue, TextStyle textStyle) {
+      GridColumn column, int rowIndex, Object? cellValue, TextStyle textStyle,
+      {bool isHeaderCell = false}) {
     final DataGridConfiguration dataGridConfiguration =
         _dataGridStateDetails!();
-    final int columnIndex = dataGridConfiguration.columns.indexOf(column);
+    final int columnIndex = resolveToScrollColumnIndex(
+        dataGridConfiguration, dataGridConfiguration.columns.indexOf(column));
     double columnWidth = !column.visible || column.width == 0.0
         ? dataGridConfiguration.defaultColumnWidth
         : dataGridConfiguration.container.columnWidths[columnIndex];
@@ -1066,14 +1129,16 @@ class ColumnSizer {
 
     final double horizontalPadding = column.autoFitPadding.horizontal;
 
-    // Removed the padding and gridline stroke width from the column width to
-    // measure the accurate height for the cell content.
-    double iconsWidth = _getSortIconWidth(column) + _getFilterIconWidth(column);
-
-    if (iconsWidth > 0) {
-      iconsWidth += iconsOuterPadding.horizontal;
+    double iconsWidth = 0.0;
+    if (isHeaderCell) {
+      iconsWidth = _getSortIconWidth(column) + _getFilterIconWidth(column);
+      if (iconsWidth > 0) {
+        iconsWidth += iconsOuterPadding.horizontal;
+      }
     }
 
+    // Removed the padding and gridline stroke width from the column width to
+    // measure the accurate height for the cell content.
     columnWidth -= iconsWidth + horizontalPadding + strokeWidth;
 
     return _calculateTextSize(
@@ -1082,7 +1147,7 @@ class ColumnSizer {
       width: columnWidth,
       textStyle: textStyle,
       rowIndex: rowIndex,
-    ).height.roundToDouble();
+    ).height.ceilToDouble();
   }
 
   TextStyle _getDefaultTextStyle(
@@ -1109,7 +1174,7 @@ class ColumnSizer {
       required DataGridConfiguration dataGridConfiguration,
       required GridColumn column}) {
     final double strokeWidth =
-        dataGridConfiguration.dataGridThemeHelper!.gridLineStrokeWidth;
+        dataGridConfiguration.dataGridThemeHelper!.gridLineStrokeWidth!;
 
     final GridLinesVisibility gridLinesVisibility =
         rowIndex <= grid_helper.getHeaderIndex(dataGridConfiguration)
@@ -1119,14 +1184,19 @@ class ColumnSizer {
     final GridColumn firstVisibleColumn = dataGridConfiguration.columns
         .firstWhere(
             (GridColumn column) => column.visible && column.width != 0.0);
-    final bool isFirstColumn =
-        firstVisibleColumn.columnName == column.columnName;
+    bool isFirstColumn = firstVisibleColumn.columnName == column.columnName;
+
+    isFirstColumn = isFirstColumn &&
+        (dataGridConfiguration.source.groupedColumns.isEmpty ||
+            (dataGridConfiguration.source.groupedColumns.isNotEmpty &&
+                dataGridConfiguration.dataGridThemeHelper!.indentColumnWidth <=
+                    0));
 
     switch (gridLinesVisibility) {
       case GridLinesVisibility.none:
         return Size.zero;
       case GridLinesVisibility.both:
-        return Size(strokeWidth,
+        return Size(isFirstColumn ? (strokeWidth + strokeWidth) : strokeWidth,
             rowIndex == 0 ? (strokeWidth + strokeWidth) : strokeWidth);
       case GridLinesVisibility.vertical:
         return Size(isFirstColumn ? (strokeWidth + strokeWidth) : strokeWidth,
@@ -1160,7 +1230,7 @@ class ColumnSizer {
 
     final TextPainter textPainter = TextPainter(
         text: TextSpan(text: value?.toString() ?? '', style: textStyle),
-        textScaleFactor: dataGridConfiguration.textScaleFactor,
+        textScaler: TextScaler.linear(dataGridConfiguration.textScaleFactor),
         textDirection: dataGridConfiguration.textDirection)
       ..layout(maxWidth: width);
 
@@ -1297,9 +1367,15 @@ class ColumnResizeController {
 
       _resizingLine = _getResizingLine(dx, canAllowBuffer);
 
+      int startColumnIndex =
+          grid_helper.resolveToStartColumnIndex(dataGridConfiguration);
+      // Need to disable column resizing for the indent columns.
+      if (dataGridConfiguration.source.groupedColumns.isNotEmpty) {
+        startColumnIndex += dataGridConfiguration.source.groupedColumns.length;
+      }
+
       if (_resizingLine != null &&
-          _resizingLine!.lineIndex >=
-              grid_helper.resolveToStartColumnIndex(dataGridConfiguration)) {
+          _resizingLine!.lineIndex >= startColumnIndex) {
         // To ensure the resizing line for the stacked header row.
         if (dataGridConfiguration.stackedHeaderRows.isNotEmpty) {
           if (!_canAllowResizing(dx, resizingDataCell,
@@ -1334,8 +1410,19 @@ class ColumnResizeController {
     if (_resizingLine != null && !isResizeIndicatorVisible) {
       final DataGridConfiguration dataGridConfiguration =
           dataGridStateDetails();
-      _currentResizingColumn =
-          dataGridConfiguration.columns[_resizingLine!.lineIndex];
+      if (dataGridConfiguration.source.groupedColumns.isNotEmpty) {
+        if (_resizingLine!.lineIndex >=
+                dataGridConfiguration.source.groupedColumns.length &&
+            _resizingLine!.lineIndex <
+                dataGridConfiguration.container.columnCount) {
+          final int lineIndex = grid_helper.resolveToGridVisibleColumnIndex(
+              dataGridConfiguration, _resizingLine!.lineIndex);
+          _currentResizingColumn = dataGridConfiguration.columns[lineIndex];
+        }
+      } else {
+        _currentResizingColumn =
+            dataGridConfiguration.columns[_resizingLine!.lineIndex];
+      }
       if (_raiseColumnResizeStart()) {
         isResizeIndicatorVisible = true;
         indicatorPosition = _getIndicatorPosition(_resizingLine!,
@@ -1519,7 +1606,7 @@ class ColumnResizeController {
     // To remove the half of stroke width to show the indicator to the
     // center of grid line.
     indicatorLeft -= dataGridConfiguration
-            .dataGridThemeHelper!.columnResizeIndicatorStrokeWidth /
+            .dataGridThemeHelper!.columnResizeIndicatorStrokeWidth! /
         2;
 
     return indicatorLeft;
@@ -1913,26 +2000,6 @@ class DataGridFilterHelper {
               .fontSize! +
           38;
 
-  /// Provides the icon color.
-  Color get iconColor =>
-      _dataGridStateDetails().colorScheme!.onSurface.withOpacity(0.6);
-
-  /// Provides the disable icon color.
-  Color get disableIconColor =>
-      _dataGridStateDetails().colorScheme!.onSurface.withOpacity(0.38);
-
-  /// Provides the border color.
-  Color get borderColor =>
-      _dataGridStateDetails().colorScheme!.onSurface.withOpacity(0.12);
-
-  /// Provides the background color.
-  Color get backgroundColor =>
-      _dataGridStateDetails().colorScheme!.onSurface.withOpacity(0.001);
-
-  /// Provides the text color.
-  Color get textColor =>
-      _dataGridStateDetails().colorScheme!.onSurface.withOpacity(0.89);
-
   /// Provides the primary color.
   Color get primaryColor => _dataGridStateDetails().colorScheme!.primary;
 
@@ -2197,7 +2264,7 @@ class DataGridFilterHelper {
 
   void _applyViewFilter(GridColumn column) {
     final DataGridSource source = _dataGridStateDetails().source;
-
+    final DataGridConfiguration dataGridConfiguration = _dataGridStateDetails();
     if (source.filterConditions.containsKey(column.columnName)) {
       final List<FilterCondition>? filterConditions =
           source.filterConditions[column.columnName];
@@ -2224,6 +2291,11 @@ class DataGridFilterHelper {
       performSorting(source, filteredRows);
       refreshEffectiveRows(source, filteredRows);
       updateDataPager(source);
+      if (dataGridConfiguration.source.groupedColumns.isNotEmpty) {
+        dataGridConfiguration.group!
+            .clearDisplayElements(dataGridConfiguration);
+        updateDataSource(source);
+      }
       notifyDataGridPropertyChangeListeners(source, propertyName: 'Filtering');
       _invokeFilterChangedCallback(column, filterConditions);
     } else {
@@ -2394,7 +2466,9 @@ class DataGridFilterHelper {
     endEdit();
     setFilterFrom(column, FilteredFrom.none);
     removeFilterConditions(dataGridConfiguration.source, column.columnName);
-
+    if (dataGridConfiguration.source.groupedColumns.isNotEmpty) {
+      dataGridConfiguration.group!.clearDisplayElements(dataGridConfiguration);
+    }
     updateDataSource(dataGridConfiguration.source);
     notifyDataGridPropertyChangeListeners(dataGridConfiguration.source,
         propertyName: 'Filtering');
@@ -3178,7 +3252,11 @@ class ColumnDragAndDropController {
   ///
   /// If [showCheckboxColumn] is true, subtracts 1 from [startIndex] to account for the checkbox column.
   /// Returns the adjusted start index as an int value.
-  int? getStartIndex(int startIndex, bool showCheckboxColumn) {
+  int? getStartIndex(int startIndex, bool showCheckboxColumn,
+      DataGridConfiguration dataGridConfiguration) {
+    if (dataGridConfiguration.source.groupedColumns.isNotEmpty) {
+      startIndex -= dataGridConfiguration.source.groupedColumns.length;
+    }
     return showCheckboxColumn ? startIndex - 1 : startIndex;
   }
 
@@ -3186,11 +3264,15 @@ class ColumnDragAndDropController {
   ///
   /// If the [showCheckboxColumn] is true, then decrement the [endIndex] by 1.
   /// If [startIndex] is equal to [endIndex], then return null.
-  int? getEndIndex(int startIndex, int endIndex, bool showCheckboxColumn) {
+  int? getEndIndex(int startIndex, int endIndex, bool showCheckboxColumn,
+      DataGridConfiguration dataGridConfiguration) {
+    if (dataGridConfiguration.source.groupedColumns.isNotEmpty) {
+      endIndex -= dataGridConfiguration.source.groupedColumns.length;
+    }
     if (showCheckboxColumn) {
       endIndex--;
     }
-    return startIndex == endIndex
+    return startIndex == endIndex || endIndex < 0
         ? null
         : showCheckboxColumn && endIndex == -1
             ? null
@@ -3227,9 +3309,10 @@ class ColumnDragAndDropController {
     canResetColumnWidthCalculation = false;
 
     if (dataCell != null && dataCell.cellType == CellType.headerCell) {
-      dragColumnStartIndex = getStartIndex(
-          dataCell.columnIndex, dataGridConfiguration.showCheckboxColumn);
-      dragColumnEndIndex = dataCell.columnIndex;
+      dragColumnStartIndex = getStartIndex(dataCell.columnIndex,
+          dataGridConfiguration.showCheckboxColumn, dataGridConfiguration);
+      dragColumnEndIndex = dataCell.columnIndex -
+          dataGridConfiguration.source.groupedColumns.length;
       canWrapDraggableView = dataGridConfiguration.onColumnDragging!(
           _invokeOnColumnDragging(action: DataGridColumnDragAction.starting));
 
@@ -3354,8 +3437,9 @@ class ColumnDragAndDropController {
           rowIndex == headerIndex &&
           dataGridConfiguration.onColumnDragging != null) {
         dragColumnEndIndex = getEndIndex(dragColumnStartIndex!, columnIndex!,
-            dataGridConfiguration.showCheckboxColumn);
-        columnIndex = columnIndex;
+            dataGridConfiguration.showCheckboxColumn, dataGridConfiguration);
+        columnIndex =
+            columnIndex! - dataGridConfiguration.source.groupedColumns.length;
         offset = event.localPosition;
 
         allowColumnDrag = dataGridConfiguration.onColumnDragging!(

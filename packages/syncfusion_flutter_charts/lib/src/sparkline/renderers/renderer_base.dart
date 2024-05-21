@@ -86,7 +86,7 @@ abstract class SfSparkChartRenderObjectWidget extends LeafRenderObjectWidget {
   final SparkChartDataDetails? sparkChartDataDetails;
 
   /// Specfies the theme of the spark chart.
-  final SfChartThemeData? themeData;
+  final SfSparkChartThemeData? themeData;
 
   /// Specifies the series screen coordinate points.
   final List<Offset>? coordinatePoints;
@@ -119,7 +119,7 @@ abstract class RenderSparkChart extends RenderBox {
       Color? negativePointColor,
       SparkChartPlotBand? plotBand,
       SparkChartDataDetails? sparkChartDataDetails,
-      SfChartThemeData? themeData,
+      SfSparkChartThemeData? themeData,
       List<Offset>? coordinatePoints,
       List<SparkChartPoint>? dataPoints})
       : _data = data,
@@ -268,13 +268,13 @@ abstract class RenderSparkChart extends RenderBox {
   }
 
   /// Defines the spark chart theme.
-  SfChartThemeData? _themeData;
+  SfSparkChartThemeData? _themeData;
 
   /// Returns the spark chart theme.
-  SfChartThemeData? get themeData => _themeData;
+  SfSparkChartThemeData? get themeData => _themeData;
 
   /// Sets the spark chart theme.
-  set themeData(SfChartThemeData? value) {
+  set themeData(SfSparkChartThemeData? value) {
     if (_themeData != value) {
       _themeData = value;
       markNeedsPaint();
@@ -519,7 +519,7 @@ abstract class RenderSparkChart extends RenderBox {
           xValue = xValueMapper!(i);
           actualX = xValue;
           if (xValue is String) {
-            labelX = xValue.toString();
+            labelX = xValue;
             xValue = i.toDouble();
           } else if (xValue is DateTime) {
             xValue = xValue.millisecondsSinceEpoch;
@@ -551,8 +551,8 @@ abstract class RenderSparkChart extends RenderBox {
     String dataLabel = value.toString();
     if (value is double) {
       value = double.parse(value.toStringAsFixed(3));
-      final List<String>? list = dataLabel.split('.');
-      if (list != null && list.length > 1 && num.parse(list[1]) == 0) {
+      final List<String> list = dataLabel.split('.');
+      if (list.length > 1 && num.parse(list[1]) == 0) {
         value = value.round();
       }
     }
@@ -611,7 +611,7 @@ abstract class RenderSparkChart extends RenderBox {
             diffX!, diffY!, areaSize!, x, y, dataPoints!.length);
         coordinatePoints!.add(visiblePoint);
       }
-      coordinatePoints = sortScreenCoordiantePoints(coordinatePoints!);
+      coordinatePoints = sortScreenCoordinatePoints(coordinatePoints!);
     }
   }
 
@@ -645,7 +645,7 @@ abstract class RenderSparkChart extends RenderBox {
         ..style = PaintingStyle.stroke
         ..color = axisLineColor!;
       if (axisLineDashArray != null && axisLineDashArray!.isNotEmpty) {
-        drawDashedPath(canvas, paint, point1, point2, axisLineDashArray!);
+        drawDashedPath(canvas, paint, point1, point2, axisLineDashArray);
       } else {
         canvas.drawLine(point1, point2, paint);
       }

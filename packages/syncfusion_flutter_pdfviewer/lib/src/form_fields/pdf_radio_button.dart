@@ -44,6 +44,9 @@ class PdfRadioFormFieldHelper extends PdfFormFieldHelper {
   /// The radio button form field object.
   late PdfRadioFormField radioFormField;
 
+  /// Flag to determine whether the form field can be reset to null value.
+  late final bool canReset;
+
   /// Creates the radio button form field object.
   PdfRadioFormField getFormField() {
     final List<String> items = <String>[];
@@ -52,8 +55,8 @@ class PdfRadioFormFieldHelper extends PdfFormFieldHelper {
     }
     final String selectedValue = pdfRadioField.selectedIndex != -1
         ? items[pdfRadioField.selectedIndex]
-        : items[0];
-
+        : '';
+    canReset = selectedValue == '';
     radioFormField = PdfRadioFormField._()
       .._items = items
       .._selectedItem = selectedValue;
@@ -116,8 +119,13 @@ class PdfRadioFormFieldHelper extends PdfFormFieldHelper {
               onChanged: invokeValueChanged,
               heightPercentage: heightPercentage,
               selectionPadding: selectionPadding,
-              fillColor: const Color.fromARGB(
-                  255, 221, 228, 255), // Custom color for the unchecked fill
+              fillColor: pdfRadioField.items[j].backColor.isEmpty
+                  ? const Color.fromARGB(255, 221, 228, 255)
+                  : Color.fromRGBO(
+                      pdfRadioField.items[j].backColor.r,
+                      pdfRadioField.items[j].backColor.g,
+                      pdfRadioField.items[j].backColor.b,
+                      1),
               size: bounds.height / heightPercentage,
             ),
           ),
@@ -140,7 +148,7 @@ class PdfRadioButton extends StatefulWidget {
       required this.onChanged,
       required this.heightPercentage,
       required this.selectionPadding,
-      this.fillColor,
+      required this.fillColor,
       this.size = 24.0})
       : super(key: key);
 
@@ -160,7 +168,7 @@ class PdfRadioButton extends StatefulWidget {
   final ValueChanged<String> onChanged;
 
   /// Radio button fill color
-  final Color? fillColor;
+  final Color fillColor;
 
   /// Radio button size
   final double size;
@@ -195,7 +203,7 @@ class _PdfRadioButtonState extends State<PdfRadioButton> {
           height: widget.size,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: widget.fillColor ?? Colors.transparent,
+            color: widget.fillColor,
           ),
           child: widget.groupValue == widget.value
               ? Icon(

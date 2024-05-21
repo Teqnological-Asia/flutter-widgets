@@ -107,7 +107,38 @@ class SfDataGridTheme extends InheritedTheme {
 class SfDataGridThemeData with Diagnosticable {
   /// Create a [SfDataGridThemeData] that's used to configure a
   /// [SfDataGridTheme].
-  factory SfDataGridThemeData({
+  const SfDataGridThemeData(
+      {this.gridLineColor,
+      this.gridLineStrokeWidth,
+      this.selectionColor,
+      this.currentCellStyle,
+      this.frozenPaneLineColor,
+      this.frozenPaneLineWidth,
+      this.sortIconColor,
+      this.headerColor,
+      this.headerHoverColor,
+      this.frozenPaneElevation,
+      this.columnResizeIndicatorColor,
+      this.columnResizeIndicatorStrokeWidth,
+      this.rowHoverColor,
+      this.rowHoverTextStyle,
+      this.sortIcon,
+      this.filterIcon,
+      this.filterIconColor,
+      this.filterIconHoverColor,
+      this.sortOrderNumberColor,
+      this.sortOrderNumberBackgroundColor,
+      this.filterPopupTextStyle,
+      this.filterPopupDisabledTextStyle,
+      this.columnDragIndicatorColor,
+      this.columnDragIndicatorStrokeWidth,
+      this.groupExpanderIcon,
+      this.indentColumnWidth,
+      this.indentColumnColor});
+
+  /// Create a [SfDataGridThemeData] that's used to configure a
+  /// [SfDataGridTheme].
+  factory SfDataGridThemeData.raw({
     Brightness? brightness,
     Color? gridLineColor,
     double? gridLineStrokeWidth,
@@ -133,9 +164,12 @@ class SfDataGridThemeData with Diagnosticable {
     TextStyle? filterPopupDisabledTextStyle,
     Color? columnDragIndicatorColor,
     double? columnDragIndicatorStrokeWidth,
+    Widget? groupExpanderIcon,
+    double? indentColumnWidth,
+    Color? indentColumnColor,
   }) {
-    return SfDataGridThemeData.raw(
-        brightness: brightness,
+    brightness = brightness ?? Brightness.light;
+    return SfDataGridThemeData(
         gridLineColor: gridLineColor,
         gridLineStrokeWidth: gridLineStrokeWidth,
         selectionColor: selectionColor,
@@ -159,69 +193,11 @@ class SfDataGridThemeData with Diagnosticable {
         filterPopupTextStyle: filterPopupTextStyle,
         filterPopupDisabledTextStyle: filterPopupDisabledTextStyle,
         columnDragIndicatorColor: columnDragIndicatorColor,
-        columnDragIndicatorStrokeWidth: columnDragIndicatorStrokeWidth);
+        columnDragIndicatorStrokeWidth: columnDragIndicatorStrokeWidth,
+        groupExpanderIcon: groupExpanderIcon,
+        indentColumnWidth: indentColumnWidth,
+        indentColumnColor: indentColumnColor);
   }
-
-  /// Create a [SfDataGridThemeData] given a set of exact values.
-  /// All the values must be specified.
-  ///
-  /// This will rarely be used directly. It is used by [lerp] to
-  /// create intermediate themes based on two themes created with the
-  /// [SfDataGridThemeData] constructor.
-  ///
-  const SfDataGridThemeData.raw(
-      {required this.brightness,
-      required this.gridLineColor,
-      required this.gridLineStrokeWidth,
-      required this.selectionColor,
-      required this.currentCellStyle,
-      required this.frozenPaneLineColor,
-      required this.frozenPaneLineWidth,
-      required this.sortIconColor,
-      required this.headerColor,
-      required this.headerHoverColor,
-      required this.frozenPaneElevation,
-      required this.columnResizeIndicatorColor,
-      required this.columnResizeIndicatorStrokeWidth,
-      required this.rowHoverColor,
-      required this.rowHoverTextStyle,
-      required this.sortIcon,
-      required this.filterIcon,
-      required this.filterIconColor,
-      required this.filterIconHoverColor,
-      required this.sortOrderNumberColor,
-      required this.sortOrderNumberBackgroundColor,
-      required this.filterPopupTextStyle,
-      required this.filterPopupDisabledTextStyle,
-      required this.columnDragIndicatorColor,
-      required this.columnDragIndicatorStrokeWidth});
-
-  /// The brightness of the overall theme of the
-  /// application for the [SfDataGrid] widgets.
-  ///
-  /// If [brightness] is not specified, then based on the
-  /// [Theme.of(context).colorScheme.brightness], brightness for
-  /// datagrid widgets will be applied.
-  ///
-  /// Also refer [Brightness].
-  ///
-  /// ```dart
-  /// Widget build(BuildContext context) {
-  ///   return Scaffold(
-  ///     body: Center(
-  ///       child: SfTheme(
-  ///         data: SfThemeData(
-  ///           dataGridThemeData: SfDataGridThemeData(
-  ///             brightness: Brightness.dark
-  ///           )
-  ///         ),
-  ///         child: SfDataGrid(),
-  ///       ),
-  ///     )
-  ///   );
-  /// }
-  /// ```
-  final Brightness? brightness;
 
   /// The color for grid line.
   ///
@@ -507,6 +483,21 @@ class SfDataGridThemeData with Diagnosticable {
   /// The color of the column drag indicator.
   final Color? columnDragIndicatorColor;
 
+  /// This icon indicates the expand-collapse state of a group in a
+  /// caption summary row.
+  ///
+  /// It will be displayed only if the
+  /// [SfDataGrid.autoExpandCollapseGroup] property is set to true.
+  final Widget? groupExpanderIcon;
+
+  /// The width of an indent column.
+  ///
+  /// Defaults to 40.0.
+  final double? indentColumnWidth;
+
+  /// The color of an indent column.
+  final Color? indentColumnColor;
+
   /// Creates a copy of this theme but with the given
   /// fields replaced with the new values.
   SfDataGridThemeData copyWith({
@@ -535,40 +526,45 @@ class SfDataGridThemeData with Diagnosticable {
     TextStyle? filterPopupDisabledTextStyle,
     double? columnDragIndicatorStrokeWidth,
     Color? columnDragIndicatorColor,
+    Widget? groupExpanderIcon,
+    double indentColumnWidth = 40.0,
+    Color? indentColumnColor,
   }) {
     return SfDataGridThemeData.raw(
-      brightness: brightness ?? this.brightness,
-      gridLineColor: gridLineColor ?? this.gridLineColor,
-      gridLineStrokeWidth: gridLineStrokeWidth ?? this.gridLineStrokeWidth,
-      selectionColor: selectionColor ?? this.selectionColor,
-      currentCellStyle: currentCellStyle ?? this.currentCellStyle,
-      frozenPaneLineColor: frozenPaneLineColor ?? this.frozenPaneLineColor,
-      frozenPaneLineWidth: frozenPaneLineWidth ?? this.frozenPaneLineWidth,
-      sortIconColor: sortIconColor ?? this.sortIconColor,
-      headerColor: headerColor ?? this.headerColor,
-      headerHoverColor: headerHoverColor ?? this.headerHoverColor,
-      frozenPaneElevation: frozenPaneElevation ?? this.frozenPaneElevation,
-      columnResizeIndicatorColor:
-          columnResizeIndicatorColor ?? this.columnResizeIndicatorColor,
-      columnResizeIndicatorStrokeWidth: columnResizeIndicatorStrokeWidth ??
-          this.columnResizeIndicatorStrokeWidth,
-      rowHoverColor: rowHoverColor ?? this.rowHoverColor,
-      rowHoverTextStyle: rowHoverTextStyle ?? this.rowHoverTextStyle,
-      sortIcon: sortIcon ?? this.sortIcon,
-      filterIcon: filterIcon ?? this.filterIcon,
-      filterIconColor: filterIconColor ?? this.filterIconColor,
-      filterIconHoverColor: filterIconHoverColor ?? this.filterIconHoverColor,
-      sortOrderNumberColor: sortOrderNumberColor ?? this.sortOrderNumberColor,
-      sortOrderNumberBackgroundColor:
-          sortOrderNumberBackgroundColor ?? this.sortOrderNumberBackgroundColor,
-      filterPopupTextStyle: filterPopupTextStyle ?? this.filterPopupTextStyle,
-      filterPopupDisabledTextStyle:
-          filterPopupDisabledTextStyle ?? this.filterPopupDisabledTextStyle,
-      columnDragIndicatorColor:
-          columnDragIndicatorColor ?? this.columnDragIndicatorColor,
-      columnDragIndicatorStrokeWidth:
-          columnDragIndicatorStrokeWidth ?? this.columnDragIndicatorStrokeWidth,
-    );
+        brightness: brightness,
+        gridLineColor: gridLineColor ?? this.gridLineColor,
+        gridLineStrokeWidth: gridLineStrokeWidth ?? this.gridLineStrokeWidth,
+        selectionColor: selectionColor ?? this.selectionColor,
+        currentCellStyle: currentCellStyle ?? this.currentCellStyle,
+        frozenPaneLineColor: frozenPaneLineColor ?? this.frozenPaneLineColor,
+        frozenPaneLineWidth: frozenPaneLineWidth ?? this.frozenPaneLineWidth,
+        sortIconColor: sortIconColor ?? this.sortIconColor,
+        headerColor: headerColor ?? this.headerColor,
+        headerHoverColor: headerHoverColor ?? this.headerHoverColor,
+        frozenPaneElevation: frozenPaneElevation ?? this.frozenPaneElevation,
+        columnResizeIndicatorColor:
+            columnResizeIndicatorColor ?? this.columnResizeIndicatorColor,
+        columnResizeIndicatorStrokeWidth: columnResizeIndicatorStrokeWidth ??
+            this.columnResizeIndicatorStrokeWidth,
+        rowHoverColor: rowHoverColor ?? this.rowHoverColor,
+        rowHoverTextStyle: rowHoverTextStyle ?? this.rowHoverTextStyle,
+        sortIcon: sortIcon ?? this.sortIcon,
+        filterIcon: filterIcon ?? this.filterIcon,
+        filterIconColor: filterIconColor ?? this.filterIconColor,
+        filterIconHoverColor: filterIconHoverColor ?? this.filterIconHoverColor,
+        sortOrderNumberColor: sortOrderNumberColor ?? this.sortOrderNumberColor,
+        sortOrderNumberBackgroundColor: sortOrderNumberBackgroundColor ??
+            this.sortOrderNumberBackgroundColor,
+        filterPopupTextStyle: filterPopupTextStyle ?? this.filterPopupTextStyle,
+        filterPopupDisabledTextStyle:
+            filterPopupDisabledTextStyle ?? this.filterPopupDisabledTextStyle,
+        columnDragIndicatorColor:
+            columnDragIndicatorColor ?? this.columnDragIndicatorColor,
+        columnDragIndicatorStrokeWidth: columnDragIndicatorStrokeWidth ??
+            this.columnDragIndicatorStrokeWidth,
+        groupExpanderIcon: groupExpanderIcon ?? this.groupExpanderIcon,
+        indentColumnWidth: indentColumnWidth,
+        indentColumnColor: indentColumnColor ?? this.indentColumnColor);
   }
 
   /// Linearly interpolate between two themes.
@@ -621,6 +617,8 @@ class SfDataGridThemeData with Diagnosticable {
           a.columnDragIndicatorStrokeWidth,
           b.columnDragIndicatorStrokeWidth,
           t),
+      indentColumnColor:
+          Color.lerp(a.indentColumnColor, b.indentColumnColor, t),
     );
   }
 
@@ -634,7 +632,6 @@ class SfDataGridThemeData with Diagnosticable {
     }
 
     return other is SfDataGridThemeData &&
-        other.brightness == brightness &&
         other.gridLineColor == gridLineColor &&
         other.gridLineStrokeWidth == gridLineStrokeWidth &&
         other.selectionColor == selectionColor &&
@@ -660,7 +657,11 @@ class SfDataGridThemeData with Diagnosticable {
         other.filterPopupTextStyle == filterPopupTextStyle &&
         other.filterPopupDisabledTextStyle == filterPopupDisabledTextStyle &&
         other.columnDragIndicatorColor == columnDragIndicatorColor &&
-        other.columnDragIndicatorStrokeWidth == columnDragIndicatorStrokeWidth;
+        other.columnDragIndicatorStrokeWidth ==
+            columnDragIndicatorStrokeWidth &&
+        other.groupExpanderIcon == groupExpanderIcon &&
+        other.indentColumnWidth == indentColumnWidth &&
+        other.indentColumnColor == indentColumnColor;
   }
 
   @override
@@ -689,7 +690,10 @@ class SfDataGridThemeData with Diagnosticable {
       filterPopupTextStyle,
       filterPopupDisabledTextStyle,
       columnDragIndicatorColor,
-      columnDragIndicatorStrokeWidth
+      columnDragIndicatorStrokeWidth,
+      groupExpanderIcon,
+      indentColumnWidth,
+      indentColumnColor
     ];
     return Object.hashAll(values);
   }
@@ -697,9 +701,7 @@ class SfDataGridThemeData with Diagnosticable {
   @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
-    final SfDataGridThemeData defaultData = SfDataGridThemeData();
-    properties.add(EnumProperty<Brightness>('brightness', brightness,
-        defaultValue: defaultData.brightness));
+    const SfDataGridThemeData defaultData = SfDataGridThemeData();
     properties.add(ColorProperty('gridLineColor', gridLineColor,
         defaultValue: defaultData.gridLineColor));
     properties.add(DoubleProperty('gridLineStrokeWidth', gridLineStrokeWidth,
@@ -757,6 +759,14 @@ class SfDataGridThemeData with Diagnosticable {
     properties.add(DiagnosticsProperty<double>(
         'columnDragIndicatorStrokeWidth', columnDragIndicatorStrokeWidth,
         defaultValue: defaultData.columnDragIndicatorStrokeWidth));
+    properties.add(DiagnosticsProperty<Widget>(
+        'groupExpanderIcon', groupExpanderIcon,
+        defaultValue: defaultData.groupExpanderIcon));
+    properties.add(DiagnosticsProperty<double>(
+        'indentColumnWidth', indentColumnWidth,
+        defaultValue: defaultData.indentColumnWidth));
+    properties.add(ColorProperty('indentColumnColor', indentColumnColor,
+        defaultValue: defaultData.indentColumnColor));
   }
 }
 

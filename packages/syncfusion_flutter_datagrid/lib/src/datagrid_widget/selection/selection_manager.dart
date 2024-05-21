@@ -25,7 +25,7 @@ class SelectionManagerBase extends ChangeNotifier {
 
   /// Processes the selection operation when [SfDataGrid] receives raw keyboard
   /// event.
-  void handleKeyEvent(RawKeyEvent keyEvent) {}
+  void handleKeyEvent(KeyEvent keyEvent) {}
 
   /// Called when the [SfDataGrid.selectionMode] is changed at run time.
   void onGridSelectionModeChanged() {}
@@ -101,12 +101,10 @@ class RowSelectionManager extends SelectionManagerBase {
   void _applySelection(RowColumnIndex rowColumnIndex) {
     final DataGridConfiguration dataGridConfiguration =
         _dataGridStateDetails!();
-
     final int recordIndex = grid_helper.resolveToRecordIndex(
         dataGridConfiguration, rowColumnIndex.rowIndex);
     DataGridRow? record =
         selection_helper.getRecord(dataGridConfiguration, recordIndex);
-
     final List<DataGridRow> addedItems = <DataGridRow>[];
     final List<DataGridRow> removeItems = <DataGridRow>[];
 
@@ -195,8 +193,7 @@ class RowSelectionManager extends SelectionManagerBase {
       }
       //If user, return false in selection changing, and we should need to
       // update the current cell.
-      else if (dataGridConfiguration.navigationMode ==
-          GridNavigationMode.cell) {
+      else {
         notifyListeners();
       }
     }
@@ -394,7 +391,10 @@ class RowSelectionManager extends SelectionManagerBase {
         _selectedRows.isNotEmpty ? _selectedRows.last : null;
     final int recordIndex = selectedRow == null
         ? -1
-        : effectiveRows(dataGridConfiguration.source).indexOf(selectedRow);
+        : dataGridConfiguration.source.groupedColumns.isNotEmpty
+            ? dataGridConfiguration.group!.displayElements!.grouped
+                .indexOf(selectedRow)
+            : effectiveRows(dataGridConfiguration.source).indexOf(selectedRow);
     updateSelectedRow(dataGridConfiguration.controller, selectedRow);
     updateSelectedIndex(dataGridConfiguration.controller, recordIndex);
   }
@@ -520,7 +520,9 @@ class RowSelectionManager extends SelectionManagerBase {
     }
 
     final DataCellBase? headerDataCell = headerDataRow.visibleColumns
-        .firstWhereOrNull((DataCellBase cell) => cell.columnIndex == 0);
+        .firstWhereOrNull((DataCellBase cell) =>
+            cell.columnIndex ==
+            dataGridConfiguration.source.groupedColumns.length);
 
     // Issue:
     // FLUT-6617-The null check operator used on the null value exception occurred
@@ -900,7 +902,7 @@ class RowSelectionManager extends SelectionManagerBase {
 
   //KeyNavigation
   @override
-  Future<void> handleKeyEvent(RawKeyEvent keyEvent) async {
+  Future<void> handleKeyEvent(KeyEvent keyEvent) async {
     final DataGridConfiguration dataGridConfiguration =
         _dataGridStateDetails!();
     if (dataGridConfiguration.currentCell.isEditing &&
@@ -963,7 +965,7 @@ class RowSelectionManager extends SelectionManagerBase {
     }
 
     if (keyEvent.logicalKey == LogicalKeyboardKey.keyA) {
-      if (keyEvent.isControlPressed) {
+      if (HardwareKeyboard.instance.isControlPressed) {
         _processSelectedAll();
       }
     }
@@ -996,7 +998,7 @@ class RowSelectionManager extends SelectionManagerBase {
   }
 
   void _processEndKey(
-      DataGridConfiguration dataGridConfiguration, RawKeyEvent keyEvent) {
+      DataGridConfiguration dataGridConfiguration, KeyEvent keyEvent) {
     final CurrentCellManager currentCell = dataGridConfiguration.currentCell;
     final int lastCellIndex =
         selection_helper.getLastCellIndex(dataGridConfiguration);
@@ -1010,8 +1012,8 @@ class RowSelectionManager extends SelectionManagerBase {
     }
 
     if ((dataGridConfiguration.isMacPlatform
-            ? keyEvent.isMetaPressed
-            : keyEvent.isControlPressed) &&
+            ? HardwareKeyboard.instance.isMetaPressed
+            : HardwareKeyboard.instance.isControlPressed) &&
         keyEvent.logicalKey != LogicalKeyboardKey.arrowRight) {
       final int lastRowIndex =
           selection_helper.getLastNavigatingRowIndex(dataGridConfiguration);
@@ -1026,7 +1028,7 @@ class RowSelectionManager extends SelectionManagerBase {
   }
 
   void _processHomeKey(
-      DataGridConfiguration dataGridConfiguration, RawKeyEvent keyEvent) {
+      DataGridConfiguration dataGridConfiguration, KeyEvent keyEvent) {
     final CurrentCellManager currentCell = dataGridConfiguration.currentCell;
     final int firstCellIndex =
         selection_helper.getFirstCellIndex(dataGridConfiguration);
@@ -1040,8 +1042,8 @@ class RowSelectionManager extends SelectionManagerBase {
     }
 
     if ((dataGridConfiguration.isMacPlatform
-            ? keyEvent.isMetaPressed
-            : keyEvent.isControlPressed) &&
+            ? HardwareKeyboard.instance.isMetaPressed
+            : HardwareKeyboard.instance.isControlPressed) &&
         keyEvent.logicalKey != LogicalKeyboardKey.arrowLeft) {
       final int firstRowIndex =
           selection_helper.getFirstNavigatingRowIndex(dataGridConfiguration);
@@ -1078,7 +1080,7 @@ class RowSelectionManager extends SelectionManagerBase {
     }
   }
 
-  void _processKeyDown(RawKeyEvent keyEvent) {
+  void _processKeyDown(KeyEvent keyEvent) {
     final DataGridConfiguration dataGridConfiguration =
         _dataGridStateDetails!();
     final CurrentCellManager currentCell = dataGridConfiguration.currentCell;
@@ -1086,8 +1088,8 @@ class RowSelectionManager extends SelectionManagerBase {
         dataGridConfiguration, currentCell.rowIndex);
     final int lastRowIndex =
         selection_helper.getLastNavigatingRowIndex(dataGridConfiguration);
-    int nextColumnIndex = currentCell.columnIndex;
-
+    int nextColumnIndex = selection_helper.getDownKeyColumnIndex(
+        dataGridConfiguration, currentCell);
     if (nextColumnIndex <= 0) {
       nextColumnIndex =
           selection_helper.getFirstCellIndex(dataGridConfiguration);
@@ -1098,63 +1100,73 @@ class RowSelectionManager extends SelectionManagerBase {
     }
 
     if (dataGridConfiguration.isMacPlatform
-        ? keyEvent.isMetaPressed
-        : keyEvent.isControlPressed) {
+        ? HardwareKeyboard.instance.isMetaPressed
+        : HardwareKeyboard.instance.isControlPressed) {
       selection_helper.scrollInViewFromTop(dataGridConfiguration,
           needToScrollToMaxExtent: true);
       _processSelectionAndCurrentCell(
           dataGridConfiguration, RowColumnIndex(lastRowIndex, nextColumnIndex),
-          isShiftKeyPressed: keyEvent.isShiftPressed);
+          isShiftKeyPressed: HardwareKeyboard.instance.isShiftPressed);
     } else {
       _processSelectionAndCurrentCell(
           dataGridConfiguration, RowColumnIndex(nextRowIndex, nextColumnIndex),
-          isShiftKeyPressed: keyEvent.isShiftPressed);
+          isShiftKeyPressed: HardwareKeyboard.instance.isShiftPressed);
     }
   }
 
-  void _processKeyUp(RawKeyEvent keyEvent) {
+  void _processKeyUp(KeyEvent keyEvent) {
     final DataGridConfiguration dataGridConfiguration =
         _dataGridStateDetails!();
     final CurrentCellManager currentCell = dataGridConfiguration.currentCell;
     final int previousRowIndex = selection_helper.getPreviousRowIndex(
         dataGridConfiguration, currentCell.rowIndex);
+    final int columnIndex = selection_helper.getUpKeyColumnIndex(
+        dataGridConfiguration, currentCell);
 
     if (previousRowIndex == currentCell.rowIndex) {
       return;
     }
 
     if (dataGridConfiguration.isMacPlatform
-        ? keyEvent.isMetaPressed
-        : keyEvent.isControlPressed) {
+        ? HardwareKeyboard.instance.isMetaPressed
+        : HardwareKeyboard.instance.isControlPressed) {
       final int firstRowIndex =
           selection_helper.getFirstRowIndex(dataGridConfiguration);
       selection_helper.scrollInViewFromDown(dataGridConfiguration,
           needToScrollToMinExtent: true);
-      _processSelectionAndCurrentCell(dataGridConfiguration,
-          RowColumnIndex(firstRowIndex, currentCell.columnIndex),
-          isShiftKeyPressed: keyEvent.isShiftPressed);
+      _processSelectionAndCurrentCell(
+          dataGridConfiguration, RowColumnIndex(firstRowIndex, columnIndex),
+          isShiftKeyPressed: HardwareKeyboard.instance.isShiftPressed);
     } else {
-      _processSelectionAndCurrentCell(dataGridConfiguration,
-          RowColumnIndex(previousRowIndex, currentCell.columnIndex),
-          isShiftKeyPressed: keyEvent.isShiftPressed);
+      _processSelectionAndCurrentCell(
+          dataGridConfiguration, RowColumnIndex(previousRowIndex, columnIndex),
+          isShiftKeyPressed: HardwareKeyboard.instance.isShiftPressed);
     }
   }
 
   void _processKeyRight(
-      DataGridConfiguration dataGridConfiguration, RawKeyEvent keyEvent) {
+      DataGridConfiguration dataGridConfiguration, KeyEvent keyEvent) {
     if (dataGridConfiguration.navigationMode == GridNavigationMode.row) {
       return;
     }
 
     final CurrentCellManager currentCell = dataGridConfiguration.currentCell;
+
+    // Need to ignore arrow right key for caption summary row.
+    if (currentCell.dataCell?.dataRow != null &&
+        currentCell.dataCell!.dataRow!.rowType ==
+            RowType.captionSummaryCoveredRow) {
+      return;
+    }
+
     final int lastCellIndex =
         selection_helper.getLastCellIndex(dataGridConfiguration);
     int nextCellIndex;
     // Need to get previous column index only if the control key is
     // pressed in RTL mode since it will perform the home key event.
     if ((dataGridConfiguration.isMacPlatform
-            ? keyEvent.isMetaPressed
-            : keyEvent.isControlPressed) &&
+            ? HardwareKeyboard.instance.isMetaPressed
+            : HardwareKeyboard.instance.isControlPressed) &&
         dataGridConfiguration.textDirection == TextDirection.rtl) {
       nextCellIndex = selection_helper.getPreviousColumnIndex(
           dataGridConfiguration, currentCell.columnIndex);
@@ -1171,8 +1183,8 @@ class RowSelectionManager extends SelectionManagerBase {
     }
 
     if (dataGridConfiguration.isMacPlatform
-        ? keyEvent.isMetaPressed
-        : keyEvent.isControlPressed) {
+        ? HardwareKeyboard.instance.isMetaPressed
+        : HardwareKeyboard.instance.isControlPressed) {
       if (dataGridConfiguration.textDirection == TextDirection.rtl) {
         _processHomeKey(dataGridConfiguration, keyEvent);
       } else {
@@ -1189,18 +1201,26 @@ class RowSelectionManager extends SelectionManagerBase {
   }
 
   void _processKeyLeft(
-      DataGridConfiguration dataGridConfiguration, RawKeyEvent keyEvent) {
+      DataGridConfiguration dataGridConfiguration, KeyEvent keyEvent) {
     if (dataGridConfiguration.navigationMode == GridNavigationMode.row) {
       return;
     }
 
     final CurrentCellManager currentCell = dataGridConfiguration.currentCell;
+
+    // Need to ignore arrow left key for caption summary row.
+    if (currentCell.dataCell?.dataRow != null &&
+        currentCell.dataCell!.dataRow!.rowType ==
+            RowType.captionSummaryCoveredRow) {
+      return;
+    }
+
     int previousCellIndex;
     // Need to get next column index only if the control key is
     // pressed in RTL mode since it will perform the end key event.
     if ((dataGridConfiguration.isMacPlatform
-            ? keyEvent.isMetaPressed
-            : keyEvent.isControlPressed) &&
+            ? HardwareKeyboard.instance.isMetaPressed
+            : HardwareKeyboard.instance.isControlPressed) &&
         dataGridConfiguration.textDirection == TextDirection.rtl) {
       previousCellIndex = selection_helper.getNextColumnIndex(
           dataGridConfiguration, currentCell.columnIndex);
@@ -1217,8 +1237,8 @@ class RowSelectionManager extends SelectionManagerBase {
     }
 
     if (dataGridConfiguration.isMacPlatform
-        ? keyEvent.isMetaPressed
-        : keyEvent.isControlPressed) {
+        ? HardwareKeyboard.instance.isMetaPressed
+        : HardwareKeyboard.instance.isControlPressed) {
       if (dataGridConfiguration.textDirection == TextDirection.rtl) {
         _processEndKey(dataGridConfiguration, keyEvent);
       } else {
@@ -1234,7 +1254,7 @@ class RowSelectionManager extends SelectionManagerBase {
     }
   }
 
-  void _processKeyTab(RawKeyEvent keyEvent) {
+  void _processKeyTab(KeyEvent keyEvent) {
     final DataGridConfiguration dataGridConfiguration =
         _dataGridStateDetails!();
     final CurrentCellManager currentCell = dataGridConfiguration.currentCell;
@@ -1242,8 +1262,14 @@ class RowSelectionManager extends SelectionManagerBase {
         selection_helper.getLastCellIndex(dataGridConfiguration);
     int firstCellIndex =
         selection_helper.getFirstCellIndex(dataGridConfiguration);
+
     final int firstRowIndex =
         selection_helper.getFirstRowIndex(dataGridConfiguration);
+
+    final bool isCaptionSummaryCoveredRow =
+        currentCell.dataCell?.dataRow != null &&
+            currentCell.dataCell!.dataRow!.rowType ==
+                RowType.captionSummaryCoveredRow;
 
     if (dataGridConfiguration.navigationMode == GridNavigationMode.row ||
         (currentCell.rowIndex < 0 && currentCell.columnIndex < 0)) {
@@ -1257,13 +1283,14 @@ class RowSelectionManager extends SelectionManagerBase {
         dataGridConfiguration.container.extentWidth >
             dataGridConfiguration.viewWidth;
 
-    if (keyEvent.isShiftPressed) {
+    if (HardwareKeyboard.instance.isShiftPressed) {
       if (currentCell.columnIndex == firstCellIndex &&
           currentCell.rowIndex == firstRowIndex) {
         return;
       }
 
-      if (currentCell.columnIndex == firstCellIndex) {
+      if (currentCell.columnIndex == firstCellIndex ||
+          isCaptionSummaryCoveredRow) {
         final int previousRowIndex = selection_helper.getPreviousRowIndex(
             dataGridConfiguration, currentCell.rowIndex);
         if (needToScrollToMinOrMaxExtend) {
@@ -1276,18 +1303,21 @@ class RowSelectionManager extends SelectionManagerBase {
         _processKeyLeft(dataGridConfiguration, keyEvent);
       }
     } else {
-      if (currentCell.columnIndex == lastCellIndex) {
+      if (currentCell.columnIndex == lastCellIndex ||
+          (dataGridConfiguration.source.groupedColumns.isNotEmpty &&
+              isCaptionSummaryCoveredRow)) {
         final int nextRowIndex = selection_helper.getNextRowIndex(
             dataGridConfiguration, currentCell.rowIndex);
         if (needToScrollToMinOrMaxExtend) {
           selection_helper.scrollInViewFromRight(dataGridConfiguration,
               needToScrollToMinExtent: needToScrollToMinOrMaxExtend);
         }
-
-        firstCellIndex = (nextRowIndex == currentCell.rowIndex &&
-                lastCellIndex == currentCell.columnIndex)
-            ? currentCell.columnIndex
-            : firstCellIndex;
+        if (dataGridConfiguration.source.groupedColumns.isEmpty) {
+          firstCellIndex = (nextRowIndex == currentCell.rowIndex &&
+                  lastCellIndex == currentCell.columnIndex)
+              ? currentCell.columnIndex
+              : firstCellIndex;
+        }
 
         _processSelectionAndCurrentCell(dataGridConfiguration,
             RowColumnIndex(nextRowIndex, firstCellIndex));
@@ -1451,7 +1481,12 @@ class CurrentCellManager {
       _updateBorderForMultipleSelection(dataGridConfiguration,
           previousRowColumnIndex: previousRowColumnIndex,
           nextRowColumnIndex: rowColumnIndex);
-    } else if (dataGridConfiguration.navigationMode == GridNavigationMode.row) {
+    } else if (dataGridConfiguration.navigationMode == GridNavigationMode.row &&
+        dataGridConfiguration.selectionMode == SelectionMode.singleDeselect) {
+      // Issue: FLUT-858176-The current row gets removed while selecting a row and then deselecting it.
+      // Fix: We have to set the current row and column index as -1 when the selection mode is singleDeselect.
+      // This will ensure that the current row and column index will be not be cleared
+      // when the selection mode is multiple or single.
       _updateCurrentRowColumnIndex(-1, -1);
     }
 
@@ -1522,6 +1557,12 @@ class CurrentCellManager {
   DataCellBase? _getDataCell(DataRowBase dataRow, int columnIndex) {
     if (dataRow.visibleColumns.isEmpty) {
       return null;
+    }
+
+    if (dataRow.rowType == RowType.captionSummaryCoveredRow) {
+      return dataRow.visibleColumns.firstWhereOrNull((DataCellBase dataCell) =>
+          columnIndex >= dataCell.columnIndex &&
+          dataCell.columnIndex + dataCell.columnSpan <= columnIndex);
     }
 
     return dataRow.visibleColumns.firstWhereOrNull(
@@ -1708,6 +1749,9 @@ class CurrentCellManager {
 
     bool checkDataCellIsValidForEditing(DataCellBase? editingDataCell) =>
         editingDataCell != null &&
+        editingDataCell.dataRow!.rowType != RowType.captionSummaryCoveredRow &&
+        editingDataCell.cellType != CellType.captionSummaryCell &&
+        editingDataCell.cellType != CellType.indentCell &&
         editingDataCell.gridColumn!.allowEditing &&
         !editingDataCell.isEditing &&
         editingDataCell.renderer != null &&
@@ -1752,7 +1796,10 @@ class CurrentCellManager {
         final DataRowBase? dataRow =
             _getDataRow(dataGridConfiguration, editingRowColumnIndex!.rowIndex);
         if (dataRow != null) {
-          dataCell = _getDataCell(dataRow, editingRowColumnIndex.columnIndex);
+          dataCell = _getDataCell(
+              dataRow,
+              grid_helper.resolveToScrollColumnIndex(
+                  dataGridConfiguration, editingRowColumnIndex.columnIndex));
         } else {
           return;
         }
@@ -1761,6 +1808,11 @@ class CurrentCellManager {
       // If the editing is initiate from f2 key, need not to process the
       // handleTap.
       if (needToResolveIndex) {
+        if (dataGridConfiguration.source.groupedColumns.isNotEmpty) {
+          editingRowColumnIndex.columnIndex =
+              grid_helper.resolveToScrollColumnIndex(
+                  dataGridConfiguration, editingRowColumnIndex.columnIndex);
+        }
         dataGridConfiguration.rowSelectionManager
             .handleTap(editingRowColumnIndex);
 
@@ -1929,6 +1981,13 @@ class CurrentCellManager {
 
           notifyDataGridPropertyChangeListeners(dataGridConfiguration.source,
               rowColumnIndex: rowColumnIndex, propertyName: 'editing');
+          if (dataGridConfiguration.source.groupedColumns.isNotEmpty) {
+            dataGridConfiguration.group!
+                .clearDisplayElements(dataGridConfiguration);
+            updateDataSource(dataGridConfiguration.source);
+            notifyDataGridPropertyChangeListeners(dataGridConfiguration.source,
+                propertyName: 'grouping');
+          }
         }
       } else {
         resetEditing();

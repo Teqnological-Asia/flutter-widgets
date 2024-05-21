@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 
 import '../../pdfviewer.dart';
+import '../change_tracker/change_tracker.dart';
 import 'pdf_form_field.dart';
 
 /// Represents the text form field.
@@ -70,12 +72,12 @@ class PdfTextFormFieldHelper extends PdfFormFieldHelper {
   late FocusNode focusNode;
 
   /// Creates the text form field object.
-  PdfTextFormField getFormField() {
+  PdfTextFormField getFormField(ChangeTracker changeTracker) {
     textFormField = PdfTextFormField._().._text = pdfTextField.text;
     super.load(textFormField);
 
     textEditingController = TextEditingController(text: textFormField._text);
-    focusNode = createFocusNode();
+    focusNode = createFocusNode(changeTracker);
 
     return textFormField;
   }
@@ -87,9 +89,34 @@ class PdfTextFormFieldHelper extends PdfFormFieldHelper {
   }
 
   /// Gets the focus node of the [PdfTextFormField].
-  FocusNode createFocusNode() {
-    return FocusNode()
-      ..addListener(() {
+  FocusNode createFocusNode(ChangeTracker changeTracker) {
+    return FocusNode(
+      onKeyEvent: (FocusNode focusNode, KeyEvent event) {
+        final bool isControlOrMeta =
+            HardwareKeyboard.instance.isControlPressed ||
+                HardwareKeyboard.instance.isMetaPressed;
+        final bool isLogicalOrPhysicalZ =
+            event.logicalKey == LogicalKeyboardKey.keyZ ||
+                event.physicalKey == PhysicalKeyboardKey.keyZ;
+        final bool isLogicalOrPhysicalY =
+            event.logicalKey == LogicalKeyboardKey.keyY ||
+                event.physicalKey == PhysicalKeyboardKey.keyY;
+
+        if (isControlOrMeta && isLogicalOrPhysicalZ) {
+          if (event is KeyDownEvent) {
+            changeTracker.undoController.undo();
+          }
+          return KeyEventResult.handled;
+        } else if (isControlOrMeta && isLogicalOrPhysicalY) {
+          if (event is KeyDownEvent) {
+            changeTracker.undoController.redo();
+          }
+          return KeyEventResult.handled;
+        } else {
+          return KeyEventResult.ignored;
+        }
+      },
+    )..addListener(() {
         if (!focusNode.hasFocus) {
           invokeFocusChange(focusNode.hasFocus);
         }
@@ -99,18 +126,15 @@ class PdfTextFormFieldHelper extends PdfFormFieldHelper {
   /// Updates the text form field.
   void invokeValueChanged(String newValue) {
     if (textFormField._text != newValue) {
+      newValue =
+          pdfTextField.maxLength > 0 && newValue.length > pdfTextField.maxLength
+              ? newValue.substring(0, pdfTextField.maxLength)
+              : newValue;
       final String oldValue = textFormField._text;
       setTextBoxValue(newValue);
       if (onValueChanged != null) {
         onValueChanged!(
             PdfFormFieldValueChangedDetails(textFormField, oldValue, newValue));
-      }
-
-      if (textFormField._children != null &&
-          textFormField._children!.isNotEmpty) {
-        for (final PdfTextFormField item in textFormField._children!) {
-          item.text = newValue;
-        }
       }
       rebuild();
     }
@@ -132,7 +156,23 @@ class PdfTextFormFieldHelper extends PdfFormFieldHelper {
     if (textEditingController.text != text) {
       textEditingController.text = text;
     }
+    _updateChildItems(text);
     pdfTextField.text = text;
+  }
+
+  /// Updates the grouped field items.
+  void _updateChildItems(String text) {
+    if (textFormField._children != null &&
+        textFormField._children!.isNotEmpty) {
+      for (final PdfTextFormField item in textFormField._children!) {
+        final PdfFormFieldHelper childHelper =
+            PdfFormFieldHelper.getHelper(item);
+        if (childHelper is PdfTextFormFieldHelper &&
+            childHelper.textEditingController.text != text) {
+          childHelper.textEditingController.text = text;
+        }
+      }
+    }
   }
 
   /// Builds the text form field widget.
@@ -159,7 +199,16 @@ class PdfTextFormFieldHelper extends PdfFormFieldHelper {
           fontSize: pdfTextField.font.size / heightPercentage,
           verticalPadding: verticalPadding / heightPercentage,
           isPassword: pdfTextField.isPassword,
+          fillColor: pdfTextField.backColor.isEmpty
+              ? const Color.fromARGB(255, 221, 228, 255)
+              : Color.fromRGBO(
+                  pdfTextField.backColor.r,
+                  pdfTextField.backColor.g,
+                  pdfTextField.backColor.b,
+                  1,
+                ),
           multiline: pdfTextField.multiline,
+          maxLength: pdfTextField.maxLength,
           onValueChanged: invokeValueChanged,
           onFocusChange: invokeFocusChange,
         ),
@@ -185,8 +234,10 @@ class PdfTextBox extends StatefulWidget {
       required this.font,
       required this.fontSize,
       this.isPassword = false,
+      required this.fillColor,
       this.multiline = false,
       required this.verticalPadding,
+      this.maxLength = 0,
       this.onValueChanged,
       this.onFocusChange,
       super.key});
@@ -202,6 +253,9 @@ class PdfTextBox extends StatefulWidget {
 
   /// Text form field is password.
   final bool isPassword;
+
+  /// Text form field fill color.
+  final Color fillColor;
 
   /// Text form field is multiline.
   final bool multiline;
@@ -220,6 +274,9 @@ class PdfTextBox extends StatefulWidget {
 
   /// Vertical padding.
   final double verticalPadding;
+
+  /// Text form field maximum length.
+  final int maxLength;
 
   @override
   State<PdfTextBox> createState() => _PdfTextBoxState();
@@ -241,6 +298,11 @@ class _PdfTextBoxState extends State<PdfTextBox> {
       cursorColor: Colors.black,
       obscureText: widget.isPassword,
       onChanged: widget.onValueChanged,
+      inputFormatters: widget.maxLength > 0
+          ? <TextInputFormatter>[
+              LengthLimitingTextInputFormatter(widget.maxLength),
+            ]
+          : null,
       keyboardType:
           widget.multiline ? TextInputType.multiline : TextInputType.text,
       scrollPhysics: widget.multiline ? const ClampingScrollPhysics() : null,
@@ -254,7 +316,7 @@ class _PdfTextBoxState extends State<PdfTextBox> {
       ),
       decoration: InputDecoration(
         filled: true,
-        fillColor: const Color.fromARGB(255, 221, 228, 255),
+        fillColor: widget.fillColor,
         contentPadding: widget.multiline
             ? const EdgeInsets.all(3)
             : EdgeInsets.symmetric(

@@ -1,5 +1,134 @@
 ## Unreleased
 
+**Features**
+
+* Provided support for loading the PDF document on a specified page.
+* Provided support for active viewport rendering. That is, at a higher zoom level, this feature renders only the part of the PDF document that is visible on the screen, ignoring the parts that are outside the viewport.
+* Provided support to undo and redo the data filled in PDF forms.
+
+**General**
+
+* Provided the Material 3 theme support.
+
+## [24.2.9] - 03/05/2024
+
+**General**
+
+* Upgraded the `js` package to the latest version 0.7.1 in the `syncfusion_pdfviewer_web` package.
+
+## [24.2.8] - 02/27/2024
+
+**Bugs**
+
+* Now the page will be centered while zooming out in landscape orientation with pinch gestures in Single Page layout mode.
+
+## [24.2.7] - 02/20/2024
+
+**Features**
+
+* Provided support to check and uncheck the grouped checkbox form fields that behave like a radio button in the PDF document.
+
+## [24.2.5] - 02/13/2024
+
+**Bugs**
+
+* Now, the `SfPdfViewer` will not crash unexpectedly when closing the application before the PDF document is loaded on iOS and macOS platforms.
+
+## [24.1.47] - 01/23/2024
+
+**Bugs**
+
+* Now, when viewing a single-page document in a continuous page layout, the user can fully zoom out of the document with a pinch gesture in the `SfPdfViewer` widget.
+
+## [24.1.46] - 01/17/2024
+
+**Bugs**
+
+* Now, the application will not crash when switching the PDF document in the `SfPdfViewer` widget on the Windows platform.
+
+**General**
+
+* Upgraded the `intl` package to the latest version 0.19.0.
+
+## [24.1.45] - 01/09/2024
+
+**Bugs**
+
+* Now, the `SfPdfViewer` will render the PDF pages considering the crop box value in iOS.
+* Now, when using German locale, the 'Open' label in the hyperlink and password dialogs will be translated properly.
+
+## [24.1.41] - 18/12/2023
+
+**Bugs**
+
+* Now, the `SfPdfViewer` will be properly deployed without namespace errors when built with a Gradle version greater than 8.x.
+
+**Features**
+
+* Provided support to add, remove, modify, and save text markup annotations in PDF files. The available text markups are highlight, underline, strikethrough, and squiggly.
+* Provided support to scroll vertically in single-page layout mode.
+
+## [23.2.6] - 11/28/2023 
+
+**Bugs**
+
+* Now, the `SfPdfViewer` will render the PDF pages considering the crop box value in iOS.
+* Now, the position is maintained in the zoomed document when performing panning in `SfPdfViewer`.
+* Now, the focus of the text form field is maintained when scrolling is performed in `SfPdfViewer`.
+
+**Features**
+
+* Enhanced the user experience of the scroll head by increasing its size in `SfPdfViewer`.
+
+## [23.2.4] - 11/20/2023
+
+**Bugs**
+
+* Now, the `SfPdfViewer` will trigger the `onTap` callback when there is a slight touch slop too.
+
+## [23.1.44] - 11/07/2023
+
+**Bugs**
+
+* Now, the `SfPdfViewer` does not trigger the `onTap` callback when performing a double-tap zoom.
+* Now, in the single-page layout mode, the page position is maintained properly in landscape orientation when performing zoom in a specific PDF document.
+
+**Features**
+
+* Support to render the background color in the form fields has been provided.
+
+## [23.1.42] - 10/24/2023
+
+**Bugs**
+
+* Now, the form fields are properly rendered in a document with a different page size in `SfPdfViewer`.
+
+**Features**
+
+* Provided support to render **digital signatures** in existing PDF documents in a non-interactive way to avoid data loss while viewing. The document's integrity is preserved if no editing operation is performed.
+
+## [23.1.40] - 10/10/2023
+
+**Bugs**
+
+* Now, the default selection of the first item in the radio button form fields has been removed.
+
+**Features**
+
+* Provided the support to restrict the text form field editing based on its maximum length.
+
+## [23.1.38] - 09/26/2023
+
+**Bugs**
+
+* Now, the PDF page content will be clear on iOS when zoomed in.
+
+**Features**
+
+* Provided support for the `continueImportOnError` option in the `importFormData` method.
+
+## [23.1.36] - 09/15/2023
+
 **Bugs**
 
 * Now, the `pagePosition` property in `PdfGestureDetails` will return the tapped position in the PDF page coordinates.

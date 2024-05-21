@@ -138,6 +138,9 @@ abstract class RenderBaseRangeSlider extends RenderBaseSlider
       _valuesInMilliseconds = SfRangeValues(
           values.start.millisecondsSinceEpoch.toDouble(),
           values.end.millisecondsSinceEpoch.toDouble());
+    } else {
+      _values = SfRangeValues(
+          (values.start as num).toDouble(), (values.end as num).toDouble());
     }
     unformattedLabels = <double>[];
     updateTextPainter();
@@ -192,7 +195,10 @@ abstract class RenderBaseRangeSlider extends RenderBaseSlider
     if (_values == values) {
       return;
     }
-    _values = values;
+    _values = isDateTime
+        ? values
+        : SfRangeValues(
+            (values.start as num).toDouble(), (values.end as num).toDouble());
     if (isDateTime) {
       _valuesInMilliseconds = SfRangeValues(
           _values.start.millisecondsSinceEpoch.toDouble(),
@@ -1208,8 +1214,11 @@ abstract class RenderBaseRangeSlider extends RenderBaseSlider
 
     drawRegions(context, trackRect, offset, startThumbCenter, endThumbCenter);
     _drawOverlayAndThumb(context, offset, endThumbCenter, startThumbCenter);
+    // To avoid positioning the tooltip text on the edge, used a 5px margin.
+    final Rect tooltipTargetRect = Rect.fromLTWH(
+        5.0, trackRect.top, mediaQueryData.size.width - 5.0, trackRect.height);
     _drawTooltip(context, endThumbCenter, startThumbCenter, offset,
-        actualTrackOffset, trackRect);
+        actualTrackOffset, tooltipTargetRect);
   }
 
   /// Describe the semantics of the start thumb.

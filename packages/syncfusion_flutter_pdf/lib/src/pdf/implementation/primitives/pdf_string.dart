@@ -89,6 +89,9 @@ class PdfString implements IPdfPrimitive {
   /// internal field
   late bool isParentDecrypted;
 
+  /// internal field
+  bool isColorSpace = false;
+
   //Implementations
   /// internal method
   List<int> pdfEncode(PdfDocument? document) {
@@ -152,12 +155,18 @@ class PdfString implements IPdfPrimitive {
 
   /// internal method
   static String bytesToHex(List<int> data) {
-    String result = '';
-    for (int i = 0; i < data.length; i++) {
-      final String radix = data[i].toRadixString(16);
-      result += (radix.length == 1 ? '0$radix' : radix).toUpperCase();
-    }
-    return result;
+    return data
+        .map((int byte) => byte.toRadixString(16).padLeft(2, '0'))
+        .join()
+        .toUpperCase();
+  }
+
+  /// internal method
+  static Future<String> bytesToHexAsync(List<int> data) async {
+    return data
+        .map((int byte) => byte.toRadixString(16).padLeft(2, '0'))
+        .join()
+        .toUpperCase();
   }
 
   /// internal method
@@ -378,6 +387,12 @@ class PdfString implements IPdfPrimitive {
       final List<int> bytes =
           encryptor.encryptData(currentObjectNumber, data!, false);
       value = byteToString(bytes);
+      const String bigEndianPreambleString = 'þÿ';
+      if (value!.length > 1 &&
+          !isColorSpace &&
+          value!.startsWith(bigEndianPreambleString)) {
+        value = decodeBigEndian(bytes, 2, bytes.length - 2);
+      }
       data = bytes;
     }
   }

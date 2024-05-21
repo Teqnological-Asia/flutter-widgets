@@ -91,12 +91,12 @@ Path? _dashPath(
   if (source == null) {
     return null;
   }
-  const double intialValue = 0.0;
+  const double initialValue = 0.0;
   final Path path = Path();
   double distance, length;
   bool draw;
   for (final PathMetric measurePath in source.computeMetrics()) {
-    distance = intialValue;
+    distance = initialValue;
     draw = true;
     while (distance < measurePath.length) {
       length = dashArray!.next;
@@ -178,7 +178,7 @@ List<SparkChartPoint> sortSparkChartPoints(List<SparkChartPoint> dataPoints) {
 }
 
 /// Method to find the sorted visible points.
-List<Offset> sortScreenCoordiantePoints(List<Offset> coordinatePoints) {
+List<Offset> sortScreenCoordinatePoints(List<Offset> coordinatePoints) {
   coordinatePoints.sort((Offset firstPoint, Offset secondPoint) {
     firstPoint.dx.compareTo(secondPoint.dx);
     if (firstPoint.dx < secondPoint.dx) {
@@ -271,7 +271,7 @@ class SparkChartPoint {
   /// Specifies the y point.
   num y;
 
-  /// Specifes the pixel location of  data label.
+  /// Specifies the pixel location of  data label.
   Offset? dataLabelOffset;
 
   /// Specifies the x label.
@@ -293,7 +293,7 @@ class SparkChartDataDetails {
   SparkChartDataDetails(
       {this.data, this.dataCount, this.xValueMapper, this.yValueMapper});
 
-  /// Speficies the list of spark chart data.
+  /// Specifies the list of spark chart data.
   final List<num>? data;
 
   /// Specifies the spark chart data count.
@@ -309,7 +309,7 @@ class SparkChartDataDetails {
 /// Represents the spark chart container.
 class SparkChartContainer extends SingleChildRenderObjectWidget {
   /// Creates the spark chart container.
-  const SparkChartContainer({Widget? child}) : super(child: child);
+  const SparkChartContainer({super.key, super.child});
 
   @override
   RenderObject createRenderObject(BuildContext context) {
@@ -393,7 +393,7 @@ void renderMarker(
     num highPoint,
     num lowPoint,
     double axisCrossesAt,
-    SfChartThemeData themeData,
+    SfSparkChartThemeData themeData,
     Color? lowPointColor,
     Color? highPointColor,
     Color? negativePointColor,
@@ -407,8 +407,7 @@ void renderMarker(
   final SparkChartMarkerShape markerShape = marker.shape;
   final double markerSize = marker.size;
   final SparkChartMarkerDisplayMode markerDisplayMode = marker.displayMode;
-  final Color themeBasedColor =
-      themeData.brightness == Brightness.light ? Colors.white : Colors.black;
+  final Color themeBasedColor = themeData.markerFillColor!;
   Path markerPath;
   final Offset lastMarkerOffset = Offset(
       offset.dx +
@@ -575,7 +574,7 @@ void renderMarker(
 Color _getDataLabelSaturationColor(
     Offset dataLabelOffset,
     Offset coordinateOffset,
-    SfChartThemeData theme,
+    SfSparkChartThemeData theme,
     Offset offset,
     Color seriesColor,
     String type,
@@ -586,25 +585,17 @@ Color _getDataLabelSaturationColor(
   if (type == 'Area') {
     dataLabelOffset.dy >= (offset.dy + coordinateOffset.dy)
         ? color = seriesColor
-        : color = theme.brightness == Brightness.light
-            ? const Color.fromRGBO(255, 255, 255, 1)
-            : Colors.black;
+        : color = theme.dataLabelBackgroundColor!;
   } else if (type == 'Line') {
-    color = theme.brightness == Brightness.light
-        ? const Color.fromRGBO(255, 255, 255, 1)
-        : Colors.black;
+    color = theme.dataLabelBackgroundColor!;
   } else {
     yValue! > 0
         ? dataLabelOffset.dy > (segment!.top + offset.dy)
             ? color = seriesColor
-            : color = theme.brightness == Brightness.light
-                ? const Color.fromRGBO(255, 255, 255, 1)
-                : Colors.black
+            : color = theme.dataLabelBackgroundColor!
         : dataLabelOffset.dy < (segment!.top + offset.dy)
             ? color = seriesColor
-            : color = theme.brightness == Brightness.light
-                ? const Color.fromRGBO(255, 255, 255, 1)
-                : Colors.black;
+            : color = theme.dataLabelBackgroundColor!;
   }
 
   color = getSaturationColor(color);
@@ -617,14 +608,15 @@ TextStyle _getTextStyle(
     Offset dataLabelOffset,
     Offset coordinateOffset,
     Offset offset,
-    SfChartThemeData theme,
+    SfSparkChartThemeData theme,
     Color seriesColor,
     String type,
     [Rect? segment,
     num? yValue]) {
   final TextStyle font = labelStyle;
-  final Color fontColor = font.color ??
-      _getDataLabelSaturationColor(dataLabelOffset, coordinateOffset, theme,
+  final Color fontColor = font.color != Colors.transparent
+      ? font.color!
+      : _getDataLabelSaturationColor(dataLabelOffset, coordinateOffset, theme,
           offset, seriesColor, type, segment, yValue);
 
   final TextStyle textStyle = TextStyle(
@@ -663,7 +655,7 @@ void renderDataLabel(
     TextStyle labelStyle,
     SparkChartLabelDisplayMode labelDisplayMode,
     String type,
-    SfChartThemeData theme,
+    SfSparkChartThemeData theme,
     Offset offset,
     Color seriesColor,
     num highPoint,
