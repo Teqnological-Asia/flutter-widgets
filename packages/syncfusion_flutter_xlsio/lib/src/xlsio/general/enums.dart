@@ -1453,9 +1453,9 @@ enum PictureResizeMode {
   /// match the new cell dimensions.
   moveAndSizeWithCell('twoCell');
 
-  /// The underlying string value for each enum value.
-  final String value;
-
   /// Constructor to initialize the enum with a string value.
   const PictureResizeMode(this.value);
+
+  /// The underlying string value for each enum value.
+  final String value;
 }

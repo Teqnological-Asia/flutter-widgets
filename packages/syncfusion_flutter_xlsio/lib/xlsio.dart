@@ -162,7 +162,8 @@ export 'src/xlsio/general/enums.dart'
         ExcelPaperSize,
         CellErrorPrintOptions,
         ActivePane,
-        DataBarAxisPosition;
+        DataBarAxisPosition,
+        PictureResizeMode;
 export 'src/xlsio/general/serialize_workbook.dart' show SerializeWorkbook;
 export 'src/xlsio/general/workbook.dart' show Workbook;
 export 'src/xlsio/hyperlinks/hyperlink.dart' show Hyperlink;
