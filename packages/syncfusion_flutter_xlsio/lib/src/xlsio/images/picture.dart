@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:image/image.dart' as img;
 
+import '../general/enums.dart';
 import '../hyperlinks/hyperlink.dart';
 
 /// Represent the Excel image.
